@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { User, Droplets, AlertTriangle, Phone, Save, Ruler, Activity, Stethoscope, FileText, Smile } from 'lucide-react';
+import { User, Droplets, AlertTriangle, Phone, Save, Ruler, Activity, Stethoscope, FileText, Smile, Camera } from 'lucide-react';
 
 const Profile = () => {
   const { user, profile, setProfile, doctor, setDoctor } = useContext(AppContext);
@@ -16,7 +16,8 @@ const Profile = () => {
     emergencyContact: '',
     doctorName: '',
     doctorPhone: '',
-    specialization: ''
+    specialization: '',
+    profilePic: ''
   });
 
   // Sync formData whenever profile or doctor changes from AppContext
@@ -33,10 +34,27 @@ const Profile = () => {
         emergencyContact: profile?.emergencyContact || '',
         doctorName: doctor?.doctorName || '',
         doctorPhone: doctor?.doctorPhone || '',
-        specialization: doctor?.specialization || ''
+        specialization: doctor?.specialization || '',
+        profilePic: profile?.profilePic || ''
       });
     }
   }, [profile, doctor]);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Limit file size to 1MB to prevent local storage quota limit error
+      if (file.size > 1024 * 1024) {
+        alert("Image is too large. Please upload an image under 1MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, profilePic: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSave = () => {
     // Save profile data
@@ -48,7 +66,8 @@ const Profile = () => {
       bloodGroup: formData.bloodGroup,
       allergies: formData.allergies,
       medicalHistory: formData.medicalHistory,
-      emergencyContact: formData.emergencyContact
+      emergencyContact: formData.emergencyContact,
+      profilePic: formData.profilePic
     });
 
     // Save doctor data
@@ -67,8 +86,21 @@ const Profile = () => {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-8 border-b border-slate-100 bg-medical-blue text-white flex flex-col md:flex-row items-center gap-6">
-          <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-white/30 shadow-inner">
-            <User size={48} className="text-white" />
+          <div className="relative group">
+            <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-white/30 shadow-inner overflow-hidden">
+              {formData.profilePic ? (
+                <img src={formData.profilePic} alt="Profile" className="w-full h-full object-cover animate-in fade-in" />
+              ) : (
+                <User size={48} className="text-white" />
+              )}
+            </div>
+            {isEditing && (
+              <label className="absolute inset-0 bg-black/60 text-white rounded-full flex flex-col items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera size={18} />
+                <span className="text-[10px] font-semibold mt-1">Change</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              </label>
+            )}
           </div>
           <div className="text-center md:text-left">
             <h2 className="text-2xl font-bold">{user?.name || 'User'}</h2>

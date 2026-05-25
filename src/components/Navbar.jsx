@@ -4,7 +4,7 @@ import { AppContext } from '../context/AppContext';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Navbar = ({ onMenuClick }) => {
-  const { user, logout, notifications, markAllNotificationsRead } = useContext(AppContext);
+  const { user, logout, notifications, markAllNotificationsRead, profile } = useContext(AppContext);
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -102,8 +102,16 @@ const Navbar = ({ onMenuClick }) => {
             <p className="text-sm font-semibold text-slate-800">{user?.name || 'User'}</p>
             <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-medical-blue transition-colors">Logout</button>
           </div>
-          <Link to="/profile">
-            <UserCircle size={32} className="text-slate-400 hover:text-medical-blue transition-colors" />
+          <Link to="/profile" className="flex items-center">
+            {profile?.profilePic ? (
+              <img 
+                src={profile.profilePic} 
+                alt="Profile" 
+                className="w-8 h-8 rounded-full border border-slate-200 object-cover hover:ring-2 hover:ring-medical-blue transition-all"
+              />
+            ) : (
+              <UserCircle size={32} className="text-slate-400 hover:text-medical-blue transition-colors" />
+            )}
           </Link>
         </div>
       </div>
