@@ -6,7 +6,7 @@ import { Save, X, ArrowLeft } from 'lucide-react';
 const AddMedicine = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { medicines, addMedicine, updateMedicine } = useContext(AppContext);
+  const { medicines, addMedicine, updateMedicine, prescriptions, addPrescription } = useContext(AppContext);
   const isEditing = !!id;
 
   const [formData, setFormData] = useState({
@@ -20,6 +20,11 @@ const AddMedicine = () => {
     status: 'Active'
   });
 
+  const [selectedPrescriptionId, setSelectedPrescriptionId] = useState('');
+  const [showNewPrescriptionForm, setShowNewPrescriptionForm] = useState(false);
+  const [newPrescriptionDate, setNewPrescriptionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newPrescriptionNotes, setNewPrescriptionNotes] = useState('');
+
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -27,6 +32,7 @@ const AddMedicine = () => {
       const medToEdit = medicines.find(m => m.id === id);
       if (medToEdit) {
         setFormData(medToEdit);
+        setSelectedPrescriptionId(medToEdit.prescriptionId || '');
       } else {
         navigate('/medicines');
       }
@@ -59,10 +65,25 @@ const AddMedicine = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
+      let finalPrescriptionId = selectedPrescriptionId;
+
+      if (selectedPrescriptionId === 'NEW') {
+        const newPres = addPrescription({
+          prescriptionDate: newPrescriptionDate,
+          notes: newPrescriptionNotes
+        });
+        finalPrescriptionId = newPres ? newPres.id : null;
+      }
+
+      const medicineData = {
+        ...formData,
+        prescriptionId: finalPrescriptionId || null
+      };
+
       if (isEditing) {
-        updateMedicine(id, formData);
+        updateMedicine(id, medicineData);
       } else {
-        addMedicine(formData);
+        addMedicine(medicineData);
       }
       navigate('/medicines');
     }
@@ -203,6 +224,59 @@ const AddMedicine = () => {
               value={formData.notes}
               onChange={(e) => setFormData({...formData, notes: e.target.value})}
             />
+          </div>
+
+          {/* Prescription Association (Prescription Entity) */}
+          <div className="border-t border-slate-100 pt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Associate with Prescription (Prescription Entity)
+              </label>
+              <select
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-medical-blue outline-none transition-all"
+                value={selectedPrescriptionId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedPrescriptionId(val);
+                  setShowNewPrescriptionForm(val === 'NEW');
+                }}
+              >
+                <option value="">None / No Prescription</option>
+                {prescriptions.map(p => (
+                  <option key={p.id} value={p.id}>
+                    Prescription on {p.prescriptionDate} ({p.notes || 'No notes'})
+                  </option>
+                ))}
+                <option value="NEW">+ Create New Prescription...</option>
+              </select>
+            </div>
+
+            {showNewPrescriptionForm && (
+              <div className="bg-blue-50/50 p-5 rounded-lg border border-blue-100 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <h4 className="font-bold text-slate-700 text-sm">New Prescription Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Prescription Date</label>
+                    <input
+                      type="date"
+                      className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-medical-blue text-sm"
+                      value={newPrescriptionDate}
+                      onChange={(e) => setNewPrescriptionDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Prescription Notes / Diagnosis</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Cardiologist clinic prescription"
+                      className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-medical-blue text-sm"
+                      value={newPrescriptionNotes}
+                      onChange={(e) => setNewPrescriptionNotes(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100">

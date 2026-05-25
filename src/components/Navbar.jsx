@@ -4,7 +4,7 @@ import { AppContext } from '../context/AppContext';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Navbar = ({ onMenuClick }) => {
-  const { user, logout, medicines, isDoseTaken } = useContext(AppContext);
+  const { user, logout, notifications, markAllNotificationsRead } = useContext(AppContext);
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -13,67 +13,16 @@ const Navbar = ({ onMenuClick }) => {
     navigate('/login');
   };
 
-  const getNotifications = () => {
-    if (!user) return [];
-    const notifications = [];
-    const now = new Date();
-    const currentHour = now.getHours();
-    const todayStr = now.toISOString().split('T')[0];
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    // Check which slot is currently active/upcoming
-    let currentSlot = '';
-    if (currentHour >= 6 && currentHour < 12) currentSlot = 'Morning';
-    else if (currentHour >= 12 && currentHour < 17) currentSlot = 'Afternoon';
-    else if (currentHour >= 17 && currentHour < 21) currentSlot = 'Evening';
-    else currentSlot = 'Night';
-
-    medicines.forEach(med => {
-      if (med.status !== 'Active') return;
-
-      // Check current slot
-      if (med.times.includes(currentSlot) && med.startDate <= todayStr && med.endDate >= todayStr) {
-        const taken = isDoseTaken(med.id, todayStr, currentSlot);
-        notifications.push({
-          id: `${med.id}-${todayStr}-${currentSlot}`,
-          text: `Dose due: ${med.name} (${med.dosage}) - ${currentSlot}`,
-          type: 'due',
-          time: 'Active Now',
-          taken
-        });
-      }
-
-      // Helper to check missed
-      const checkMissed = (dateStr, slot, hasPassed, label) => {
-        if (!med.times.includes(slot)) return;
-        if (med.startDate > dateStr || med.endDate < dateStr) return;
-        if (!hasPassed) return;
-
-        const taken = isDoseTaken(med.id, dateStr, slot);
-        if (!taken) {
-          notifications.push({
-            id: `missed-${med.id}-${dateStr}-${slot}`,
-            text: `Missed: ${med.name} (${med.dosage}) - ${slot} (${label})`,
-            type: 'missed',
-            time: label,
-            taken: false
-          });
-        }
-      };
-
-      checkMissed(todayStr, 'Morning', currentHour >= 12, 'Today');
-      checkMissed(todayStr, 'Afternoon', currentHour >= 17, 'Today');
-      checkMissed(todayStr, 'Evening', currentHour >= 21, 'Today');
-      checkMissed(yesterdayStr, 'Night', currentHour >= 6, 'Yesterday');
-    });
-
-    return notifications;
+  const handleToggleNotifications = () => {
+    const nextState = !showNotifications;
+    setShowNotifications(nextState);
+    if (nextState) {
+      markAllNotificationsRead();
+    }
   };
 
-  const notifications = getNotifications();
-  const unreadCount = notifications.filter(n => !n.taken).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const sortedNotifications = [...notifications].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   return (
     <nav className="bg-white border-b border-slate-200 sticky top-0 z-30 h-16 flex items-center justify-between px-4 lg:px-8 shadow-sm">
@@ -95,7 +44,7 @@ const Navbar = ({ onMenuClick }) => {
       <div className="flex items-center gap-4 relative">
         <div className="relative">
           <button 
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={handleToggleNotifications}
             className="p-2 text-slate-500 hover:text-medical-blue hover:bg-blue-50 rounded-full transition-colors relative"
           >
             <Bell size={22} />
@@ -110,31 +59,35 @@ const Navbar = ({ onMenuClick }) => {
                 <span className="font-bold text-slate-800">Notifications</span>
                 {unreadCount > 0 && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 bg-red-50 text-red-600 rounded-full">
-                    {unreadCount} active alert{unreadCount > 1 ? 's' : ''}
+                    {unreadCount} new alert{unreadCount > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
               <div className="max-h-64 overflow-y-auto">
-                {notifications.length === 0 ? (
+                {sortedNotifications.length === 0 ? (
                   <div className="px-4 py-6 text-center text-sm text-slate-400 italic">
-                    No active notifications
+                    No notifications
                   </div>
                 ) : (
-                  notifications.map(n => (
+                  sortedNotifications.map(n => (
                     <div 
                       key={n.id} 
-                      className="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 flex items-start gap-2.5 transition-colors"
+                      className={`px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 flex items-start gap-2.5 transition-colors ${
+                        !n.isRead ? 'bg-blue-50/20' : ''
+                      }`}
                     >
                       <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                        n.type === 'missed' ? 'bg-red-500' : n.taken ? 'bg-green-400' : 'bg-blue-500'
+                        n.type === 'missed' ? 'bg-red-500' : 'bg-blue-500'
                       }`} />
                       <div className="flex-1">
                         <p className={`text-sm text-left ${
-                          n.type === 'missed' ? 'text-red-700 font-medium' : n.taken ? 'text-slate-500 line-through' : 'text-slate-700 font-medium'
+                          n.type === 'missed' ? 'text-red-700 font-medium' : 'text-slate-700'
                         }`}>
-                          {n.text}
+                          {n.message}
                         </p>
-                        <span className="text-[10px] text-slate-400 block text-left mt-0.5">{n.time}</span>
+                        <span className="text-[10px] text-slate-400 block text-left mt-0.5">
+                          {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
                     </div>
                   ))

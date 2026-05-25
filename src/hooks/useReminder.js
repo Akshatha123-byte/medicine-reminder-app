@@ -16,7 +16,7 @@ export const toastEmitter = {
 };
 
 const useReminder = () => {
-  const { medicines, user, isDoseTaken } = useContext(AppContext);
+  const { medicines, user, isDoseTaken, addNotification } = useContext(AppContext);
   const [notified, setNotified] = useState({}); // track notified doses to avoid spamming
   const [notifiedMissed, setNotifiedMissed] = useState({});
 
@@ -111,9 +111,15 @@ const useReminder = () => {
       });
     };
 
-    const triggerReminder = (med, timeSlot) => {
-      const message = `Time to take your ${med.name} (${med.dosage})`;
+    const triggerReminder = (med, slot) => {
+      const message = `Time to take your ${med.name} (${med.dosage}) - ${slot}`;
       
+      // Save notification record to database
+      addNotification({
+        message,
+        type: 'due'
+      });
+
       // Toast
       toastEmitter.emit(message);
       
@@ -140,6 +146,12 @@ const useReminder = () => {
       const displayDate = isToday ? 'today' : 'yesterday';
       const message = `⚠️ You missed your scheduled ${slot} dose of ${med.name} (${med.dosage}) for ${displayDate}!`;
       
+      // Save notification record to database
+      addNotification({
+        message,
+        type: 'missed'
+      });
+
       // Toast
       toastEmitter.emit(message);
       

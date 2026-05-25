@@ -3,17 +3,61 @@ import { AppContext } from '../context/AppContext';
 import { User, Droplets, AlertTriangle, Phone, Save, Ruler, Activity, Stethoscope, FileText, Smile } from 'lucide-react';
 
 const Profile = () => {
-  const { user, profile, setProfile } = useContext(AppContext);
+  const { user, profile, setProfile, doctor, setDoctor } = useContext(AppContext);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState(profile);
+  const [formData, setFormData] = useState({
+    age: '',
+    gender: '',
+    weight: '',
+    height: '',
+    bloodGroup: '',
+    allergies: '',
+    medicalHistory: '',
+    emergencyContact: '',
+    doctorName: '',
+    doctorPhone: '',
+    specialization: ''
+  });
 
-  // Sync formData whenever profile changes from AppContext (fixes edit bug)
+  // Sync formData whenever profile or doctor changes from AppContext
   useEffect(() => {
-    setFormData(profile);
-  }, [profile]);
+    if (profile || doctor) {
+      setFormData({
+        age: profile?.age || '',
+        gender: profile?.gender || '',
+        weight: profile?.weight || '',
+        height: profile?.height || '',
+        bloodGroup: profile?.bloodGroup || '',
+        allergies: profile?.allergies || '',
+        medicalHistory: profile?.medicalHistory || '',
+        emergencyContact: profile?.emergencyContact || '',
+        doctorName: doctor?.doctorName || '',
+        doctorPhone: doctor?.doctorPhone || '',
+        specialization: doctor?.specialization || ''
+      });
+    }
+  }, [profile, doctor]);
 
   const handleSave = () => {
-    setProfile(formData);
+    // Save profile data
+    setProfile({
+      age: formData.age,
+      gender: formData.gender,
+      weight: formData.weight,
+      height: formData.height,
+      bloodGroup: formData.bloodGroup,
+      allergies: formData.allergies,
+      medicalHistory: formData.medicalHistory,
+      emergencyContact: formData.emergencyContact
+    });
+
+    // Save doctor data
+    setDoctor({
+      doctorName: formData.doctorName,
+      doctorPhone: formData.doctorPhone,
+      specialization: formData.specialization
+    });
+
     setIsEditing(false);
   };
 
@@ -97,6 +141,14 @@ const Profile = () => {
               placeholder="e.g., O+"
             />
             <InfoField 
+              icon={Phone} 
+              label="Emergency Contact" 
+              value={formData.emergencyContact} 
+              isEditing={isEditing}
+              onChange={(v) => setFormData({...formData, emergencyContact: v})}
+              placeholder="Name & Number"
+            />
+            <InfoField 
               icon={AlertTriangle} 
               label="Allergies" 
               value={formData.allergies} 
@@ -114,24 +166,40 @@ const Profile = () => {
               placeholder="e.g., Hypertension, Diabetes"
               fullWidth
             />
-            <InfoField 
-              icon={Phone} 
-              label="Emergency Contact" 
-              value={formData.emergencyContact} 
-              isEditing={isEditing}
-              onChange={(v) => setFormData({...formData, emergencyContact: v})}
-              placeholder="Name & Number"
-              fullWidth
-            />
-            <InfoField 
-              icon={Stethoscope} 
-              label="Primary Doctor / Caregiver Contact" 
-              value={formData.primaryDoctor} 
-              isEditing={isEditing}
-              onChange={(v) => setFormData({...formData, primaryDoctor: v})}
-              placeholder="Dr. Smith - (555) 019-2834"
-              fullWidth
-            />
+
+            {/* Relational Doctor Entity Fields */}
+            <div className="md:col-span-2 border-t border-slate-100 pt-6 mt-4">
+              <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Stethoscope size={18} className="text-medical-blue" />
+                Primary Doctor Details (Doctor Entity)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <InfoField 
+                  icon={User} 
+                  label="Doctor Name" 
+                  value={formData.doctorName} 
+                  isEditing={isEditing}
+                  onChange={(v) => setFormData({...formData, doctorName: v})}
+                  placeholder="e.g., Dr. Smith"
+                />
+                <InfoField 
+                  icon={Phone} 
+                  label="Doctor Phone" 
+                  value={formData.doctorPhone} 
+                  isEditing={isEditing}
+                  onChange={(v) => setFormData({...formData, doctorPhone: v})}
+                  placeholder="e.g., (555) 019-2834"
+                />
+                <InfoField 
+                  icon={Activity} 
+                  label="Specialization" 
+                  value={formData.specialization} 
+                  isEditing={isEditing}
+                  onChange={(v) => setFormData({...formData, specialization: v})}
+                  placeholder="e.g., Cardiologist"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
